@@ -108,6 +108,27 @@ FOLLOWING POSITIONS
 CANCEL THIS MESSAGE  291100 UTC JUL 20.
 ---</div>
 
+<h2>Download Test Files</h2>
+<p>These WAV files are over-the-air WebSDR captures of live 518 kHz NAVTEX traffic.  They can be played from any audio source (laptop, second phone) near the iPhone&rsquo;s microphone to test the app without a shortwave receiver.</p>
+<table>
+  <tr><th>File</th><th>Description</th><th>Size</th></tr>
+  <tr><td><a href="audio/navtex_518khz_5min.wav">navtex_518khz_5min.wav</a></td><td>5 min 23 s &mdash; NCC-Hamburg nav warnings; 13 framed messages expected</td><td>~5 MB</td></tr>
+  <tr><td><a href="audio/navtex_518khz_8min.wav">navtex_518khz_8min.wav</a></td><td>8 min 35 s &mdash; Netherlands Coastguard nav warnings; 20 framed messages expected</td><td>~8 MB</td></tr>
+</table>
+
+<h3>Testing Instructions</h3>
+<ol>
+  <li>Download either WAV file above (start with the 5-minute one for a quicker test).</li>
+  <li>Launch PhosphorTEX on an iPhone. Grant microphone permission when asked.</li>
+  <li>Open the DECODE tab (F1). Leave all defaults (AUTO FREQ on, INVERT off).</li>
+  <li>Tap START.</li>
+  <li>Play the WAV on a laptop or second device at conversational volume, 15&ndash;30 cm from the iPhone&rsquo;s microphone.</li>
+  <li>Within a few seconds the LOCK indicator in the status row (top-right) lights up and MARK / SPACE / SHIFT show frequencies in the ~915&nbsp;/&nbsp;1085 Hz range with a 170 Hz shift.</li>
+  <li>After 10&ndash;20 seconds of phasing preamble, text starts appearing. In TAPE view (bottom-left of the DECODE tab) you&rsquo;ll see lines like <code>ZCZC PA19 NETHERLANDS COASTGUARD NAVIGATIONAL WARNING NR. 19 &hellip;</code></li>
+  <li>Switch to CARDS to see each framed message as a structured card with station letter, subject badge, timestamp, and body.</li>
+  <li>LOG tab accumulates the framed messages. Over the full 8-minute WAV you should see ~20 entries.</li>
+</ol>
+
 <h2>Scope</h2>
 <p>The decoder targets both of the common NAVTEX audio tuning conventions:</p>
 <ul>
