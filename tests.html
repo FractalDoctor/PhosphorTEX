@@ -183,16 +183,70 @@ phase[6]: chars= 53 dx= 51 rx=  0 errs=  2 mism= 48 (90.6%)</pre>
 <h3>navtex_long_nnnn_missing.wav &mdash; Dropped Terminator</h3>
 <p>Simulates a station that skipped the <code>NNNN</code> sentinel. The framer enters <code>.body</code> state on <code>ZCZC</code> detection, accumulates characters, and would normally close when <code>NNNN</code> arrives. Because it never does, the end-of-file flush path fires (same code path as the app&rsquo;s STOP button) and the message is emitted with <code>truncated: true</code>. The body is decoded cleanly up to the point of EOF.</p>
 
-<h2>AFC Retune Count (Clean Synthetic)</h2>
-<p>A sensitive measure of AFC stability. Before porting in parabolic sub-bin peak interpolation and centre-tracking smoothing: 19 retunes in 38.9 s of clean signal, each one disrupting the Goertzel filter response and costing bits. After:</p>
+<h2>Real-world SDR captures</h2>
+<p>Tested against publicly-available WebSDR recordings of 518 kHz NAVTEX traffic.  These are noisy over-the-air captures &mdash; no cleanup, no SNR preconditioning &mdash; at audio tunings spanning both the maritime-receiver (~1615 Hz mark) and SDR (~1085 Hz mark) conventions.</p>
+
 <table>
-  <tr><th>AFC Implementation</th><th>Retunes (38.9 s)</th><th>Decoded Body</th></tr>
-  <tr><td>Pre-port (3-frame confirm + 16 Hz threshold)</td><td class="warn">19</td><td class="warn">Fragmented &mdash; chunks lost at each retune</td></tr>
-  <tr><td>Post-port (parabolic interp + &plusmn;3 Hz/frame + 1 Hz threshold)</td><td class="good">0</td><td class="good">Clean &mdash; 178/178 chars, 0 errors</td></tr>
+  <tr><th>Capture</th><th>Duration</th><th>Audio centre</th><th>Messages framed</th><th>Sample content</th></tr>
+  <tr>
+    <td>WebSDR 518 kHz, May 2018</td><td>8 min 35 s</td><td>~1000 Hz (SDR)</td><td class="good">20 messages</td>
+    <td>Netherlands Coastguard nav warnings (Windfarm Borssele, geotechnical drilling, Riffgat lightbuoys, Helgoland German Bight exercises, etc.)</td>
+  </tr>
+  <tr>
+    <td>WebSDR 518 kHz, July 2020</td><td>5 min 23 s</td><td>~1000 Hz (SDR)</td><td class="good">13 messages</td>
+    <td>NCC-Hamburg nav warnings (German armed forces firing exercises, OWP Kaskasi survey operations, etc.)</td>
+  </tr>
 </table>
 
+<h2>Decoded output &mdash; WebSDR 518 kHz, May 2018</h2>
+
+<div class="sample">--- 2026-04-21 | PA19 | NAV WARNING
+NETHERLANDS COASTGUARD
+NAVIGATIONAL WARNING NR. 19 212040 UTC MAY
+WINDFARM BORSSELE
+GEOPHYSICAL SURVEY BY BIBBY TETHRA 2EGF8
+A. 51-41N 003-08E
+B. 51-41N 002-58E
+C. 51-49N 003-08E
+D. 51-49N 002-58E
+WIDE BERTH REQUESTED
+---</div>
+
+<div class="sample">--- 2026-04-21 | PA42 | NAV WARNING
+NETHERLANDS COASTGUARD
+NAVIGATIONAL WARNING NR. 42 241200 UTC MAY
+RIFFGAT
+FOLLOWING LIGHTBUOYS ESTABLISHED
+MARKING OYSTER SEABED FARM
+CARDINAL SPAR BUOY WNF-N VQ
+...
+---</div>
+
+<h2>Decoded output &mdash; WebSDR 518 kHz, July 2020</h2>
+
+<div class="sample">--- 2026-04-21 | SA97 | NAV WARNING
+NCC-HAMBURG
+280430 UTC JUL 20
+NAV. WARN. NO. 314
+GERMAN BIGHT. NORTHWESTERLY OF HELIGOLAND.
+FIRING EXERCISES OF GERMAN ARMED FORCES.
+ON 29TH OF JULY FROM 0900 TO 1000 UTC. IN THE CHARTED AREA BOUNDED BY
+
+FOLLOWING POSITIONS
+54-40N 006-30E
+54-40N 007-00E
+54-15N 007-00E
+54-15N 006-30E
+CANCEL THIS MESSAGE  291100 UTC JUL 20.
+---</div>
+
 <h2>Scope</h2>
-<p>PhosphorTEX targets the conventional NAVTEX receiver configuration: USB audio with the carrier positioned so that the mark tone lands at approximately 1615 Hz (space 1785 Hz, 170 Hz shift). Every NAVTEX-capable shortwave receiver's operating manual directs you to this tuning. Recordings made with a non-conventional intermediate-frequency offset (carrier placed elsewhere, mark at a different audio frequency) are out of scope for this decoder &mdash; tune the receiver correctly and it works.</p>
+<p>The decoder targets both of the common NAVTEX audio tuning conventions:</p>
+<ul>
+  <li><strong>Maritime-receiver convention</strong>: USB with the carrier positioned so mark lands at approximately 1615 Hz (space 1785 Hz, 170 Hz shift).  This is what every NAVTEX receiver operator's manual specifies.</li>
+  <li><strong>SDR / WebSDR convention</strong>: the receiver tuned to 517.000 kHz in USB mode, placing the mark tone at approximately 1085 Hz and space at 915 Hz.  This is what the publicly-available recordings at 518 kHz universally use.</li>
+</ul>
+<p>AFC search band is 800&ndash;2500 Hz to span both, and the decoder runs normal and polarity-inverted lanes in parallel so mark-on-upper-tone vs mark-on-lower-tone captures both decode without any manual toggle.</p>
 
 <h2>Summary</h2>
 <ul>
