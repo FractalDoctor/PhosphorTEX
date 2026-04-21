@@ -1,0 +1,141 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PhosphorTEX - Real-Time NAVTEX Decoder</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            background: #0a0a0a;
+            color: #FFB300;
+            font-family: "SF Mono", "Menlo", "Monaco", "Courier New", monospace;
+            font-size: 14px;
+            line-height: 1.6;
+            padding: 40px 20px;
+            max-width: 720px;
+            margin: 0 auto;
+        }
+        .border-top, .border-bottom {
+            color: #b07800;
+            white-space: pre;
+            overflow: hidden;
+            font-size: 13px;
+        }
+        h1 {
+            color: #FFB300;
+            font-size: 22px;
+            font-weight: normal;
+            text-align: center;
+            padding: 20px 0 4px 0;
+            letter-spacing: 3px;
+        }
+        .tagline {
+            text-align: center;
+            color: #805800;
+            padding: 0 0 20px 0;
+            font-size: 13px;
+        }
+        h2 {
+            color: #FFB300;
+            font-size: 14px;
+            font-weight: normal;
+            padding: 16px 0 8px 0;
+            letter-spacing: 1px;
+        }
+        p, li {
+            color: #c09000;
+            padding: 4px 0;
+        }
+        ul {
+            list-style: none;
+            padding: 0;
+        }
+        ul li::before {
+            content: "> ";
+            color: #FFB300;
+        }
+        a {
+            color: #FFB300;
+        }
+        .content {
+            padding: 0 16px;
+        }
+        .links {
+            padding-top: 20px;
+            font-size: 13px;
+        }
+        .links a {
+            display: inline-block;
+            margin-right: 24px;
+            text-decoration: none;
+        }
+        .links a:hover { text-decoration: underline; }
+    </style>
+</head>
+<body>
+
+<div class="border-top">&#9484;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9488;</div>
+
+<h1>&#9651; PHOSPHORTEX</h1>
+<div class="tagline">Real-Time NAVTEX Maritime-Safety Decoder for iPhone.</div>
+
+<div class="content">
+
+<p>PhosphorTEX decodes NAVTEX (Navigational Telex) broadcasts in real time using your iPhone's microphone. Hold your phone near a shortwave receiver tuned to 518 kHz, 490 kHz, or 4209.5 kHz and watch gale warnings, nav warnings, and maritime safety information appear on an authentic amber phosphor display.</p>
+
+<p>No internet connection required. No external hardware. No account. Just your iPhone and a maritime receiver.</p>
+
+<h2>FEATURES</h2>
+<ul>
+    <li>Real-time NAVTEX decoding via microphone &mdash; CCIR-476 SITOR-B, 100 Bd, 170 Hz shift</li>
+    <li>Time-diversity FEC: 5-character DX/RX pair-merge (fldigi-canonical)</li>
+    <li>7-way phase-ambiguity disambiguator picks the correct character-boundary phase automatically</li>
+    <li>Automatic frequency control with FFT peak-pair search locked to 170 Hz shift</li>
+    <li>ZCZC&hellip;NNNN message framer with B1/B2/B3B4 header parsing</li>
+    <li>CARDS view: message cards coloured by subject (SAR/piracy, nav warning, met warning, ice report &hellip;)</li>
+    <li>TAPE view: raw teleprinter stream, character-by-character, including FEC ERR markers</li>
+    <li>Live FFT spectrum display and scrolling waterfall (SDR-style colour palette)</li>
+    <li>FEC health panel: DX valid %, RX fallback %, ERR %, alternation lock status</li>
+    <li>NAVAREA station schedule tab: 24-slot grid, current-slot highlight, UTC clock</li>
+    <li>Per-subject mute list (D-category SAR/piracy messages always override)</li>
+    <li>Full message log with search, share, and export</li>
+    <li>Amber phosphor CRT theme with scanlines, vignette, and glow effects</li>
+    <li>No accounts, no tracking, no network access</li>
+</ul>
+
+<h2>DSP ENGINE</h2>
+<p>Per-sample I/Q quadrature demodulation with biquad low-pass filtering and W7AY Automatic Threshold Correction. Synchronous 7-bit SITOR-B framer with DPLL clock recovery. Seven parallel character-phase candidates scored by DX/RX mismatch rate on real message content &mdash; the winning phase commits and its buffered history replays through the framer so the ZCZC header is never lost. 512-point FFT for frequency analysis and AFC. All signal processing runs entirely on-device.</p>
+
+<h2>DECODER ACCURACY</h2>
+<p>PhosphorTEX has been tested against synthetic NAVTEX test signals generated from fldigi-canonical wire format. Detailed test results, methodology, and decoded output samples are available in the <a href="tests.html">decoder test report</a>.</p>
+
+<h2>WHERE TO FIND NAVTEX</h2>
+<ul>
+    <li>518 kHz &mdash; International (English). The primary NAVTEX band.</li>
+    <li>490 kHz &mdash; National language broadcasts (Dutch, French, Portuguese, etc.)</li>
+    <li>4209.5 kHz &mdash; HF, tropical / long-range coverage.</li>
+</ul>
+<p>A shortwave receiver (or SDR / WebSDR audio played through a speaker) tuned in USB with carrier positioned so the mark tone is around 1615 Hz is all you need. NAVTEX stations broadcast in assigned 10-minute slots within a 4-hour cycle &mdash; check the SCHEDULE tab for current and upcoming slots.</p>
+
+<h2>SUPPORT</h2>
+<p>Need help? Have a question, bug report, or feature request?</p>
+<ul>
+    <li><a href="https://github.com/FractalDoctor/PhosphorTEX/issues/new?labels=question&template=blank" target="_blank" rel="noopener">Ask a question</a> &mdash; get help with using PhosphorTEX</li>
+    <li><a href="https://github.com/FractalDoctor/PhosphorTEX/issues/new?labels=bug" target="_blank" rel="noopener">Report a bug</a> &mdash; let us know if something isn't working</li>
+    <li><a href="https://github.com/FractalDoctor/PhosphorTEX/issues/new?labels=enhancement" target="_blank" rel="noopener">Request a feature</a> &mdash; suggest improvements or new functionality</li>
+</ul>
+<p>You can also browse <a href="https://github.com/FractalDoctor/PhosphorTEX/issues" target="_blank" rel="noopener">existing issues</a> to see if your question has already been answered.</p>
+
+<div class="links">
+    <a href="privacy.html">Privacy Policy</a>
+    <a href="tests.html">Decoder Test Report</a>
+    <a href="https://github.com/FractalDoctor/PhosphorTEX/issues">Support &amp; Issues</a>
+</div>
+
+</div>
+
+<div class="border-bottom" style="padding-top: 24px;">&#9492;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9496;</div>
+
+</body>
+</html>
