@@ -89,7 +89,7 @@
 <h2>FEATURES</h2>
 <ul>
     <li>Real-time NAVTEX decoding via microphone &mdash; CCIR-476 SITOR-B, 100 Bd, 170 Hz shift</li>
-    <li>Time-diversity FEC: 5-character DX/RX pair-merge (fldigi-canonical)</li>
+    <li>Time-diversity FEC: 5-character DX/RX pair-merge per CCIR-476 spec</li>
     <li>7-way phase-ambiguity disambiguator picks the correct character-boundary phase automatically</li>
     <li>Automatic frequency control with FFT peak-pair search locked to 170 Hz shift</li>
     <li>ZCZC&hellip;NNNN message framer with B1/B2/B3B4 header parsing</li>
@@ -108,7 +108,7 @@
 <p>Per-sample I/Q quadrature demodulation with biquad low-pass filtering and W7AY Automatic Threshold Correction. Synchronous 7-bit SITOR-B framer with DPLL clock recovery. Seven parallel character-phase candidates scored by DX/RX mismatch rate on real message content &mdash; the winning phase commits and its buffered history replays through the framer so the ZCZC header is never lost. 512-point FFT for frequency analysis and AFC. All signal processing runs entirely on-device.</p>
 
 <h2>DECODER ACCURACY</h2>
-<p>PhosphorTEX has been tested against synthetic NAVTEX test signals generated from fldigi-canonical wire format. Detailed test results, methodology, and decoded output samples are available in the <a href="tests.html">decoder test report</a>.</p>
+<p>PhosphorTEX has been tested against synthetic NAVTEX test signals generated directly from the CCIR-476 wire format specification. Detailed test results, methodology, and decoded output samples are available in the <a href="tests.html">decoder test report</a>.</p>
 
 <h2>WHERE TO FIND NAVTEX</h2>
 <ul>
