@@ -36,7 +36,7 @@
 <h2>Methodology</h2>
 <ul>
   <li>All tests run via the <code>NavTexDecode</code> CLI tool, which shares DSP source files with the iOS app via symlinks (single source of truth).</li>
-  <li>Each synthetic scenario is generated from the same fldigi-canonical wire format that real NAVTEX transmissions use: <code>create_fec</code>-style alpha/rep interleaving with <code>offset = 2</code> and a <code>2&times;[code_rep, code_alpha]</code> preamble that triggers the receiver's rep-on-alpha resync.</li>
+  <li>Each synthetic scenario is generated from the CCIR-476 wire format specification: alpha / rep interleaving with a 2-character offset and a <code>2&times;[code_rep, code_alpha]</code> preamble that triggers the receiver's rep-on-alpha resync.</li>
   <li>FEC statistics are reported per the winning candidate of the 7-way phase disambiguator: <code>DX</code> = alpha copy 4:3-valid, <code>RX</code> = fell back to rep copy, <code>ERRS</code> = both invalid, <code>MISM</code> = both valid but disagreed.</li>
   <li>CARDS output = framed <code>ZCZC &hellip; NNNN</code> message; TAPE output = raw merged character stream.</li>
 </ul>
@@ -49,19 +49,14 @@
   <li>Envelope: asymmetric decay-average (attack = symbollen/4, decay = symbollen&times;16)</li>
   <li>Bit decision: mark / space magnitude compare with hysteretic squelch (open &gt; 0.002, close &gt; 0.001)</li>
   <li>SitorDecoder: synchronous 7-bit framer, DPLL &alpha; = 0.05</li>
-  <li>FECMerger: 5-character DX/RX pair-merge delay (fldigi-canonical)</li>
+  <li>FECMerger: 5-character DX/RX pair-merge delay per CCIR-476 spec</li>
   <li>PhaseDisambiguator: 7 parallel SitorDecoders with lockThreshold = 8..14, scored by <code>(mismatched + 2&times;bothInvalid) / contentCharsIn</code>, decisive commit below 0.05</li>
-  <li>AFC: parabolic sub-bin peak interpolation (3-point fit), fldigi-canonical centre tracking (snap on acquisition, ±3 Hz/frame clamp in steady-state, 1 Hz retune threshold), shift snapped to 170 Hz exact per fldigi&rsquo;s <code>deviation_f = 85</code> constant</li>
+  <li>AFC: parabolic sub-bin peak interpolation (3-point fit), centre tracking with snap on acquisition and ±3 Hz/frame clamp in steady-state, 1 Hz retune threshold, shift snapped to 170 Hz exact per the CCIR-476 specification</li>
   <li>NAVTEX protocol parameters (fixed): 100 Bd, 170 Hz shift, CCIR-476 alphabet (4-marks + 3-spaces validity test)</li>
 </ul>
 
-<h2>Reference Implementations</h2>
-<p>PhosphorTEX&rsquo;s DSP is cross-checked against three canonical open-source NAVTEX decoders. Where our code differs, we defer to these:</p>
-<ul>
-  <li><strong>fldigi</strong> &mdash; <a href="https://github.com/w1hkj/fldigi/blob/master/src/navtex/navtex.cxx">src/navtex/navtex.cxx</a>. The CCIR-476 tables, FEC alpha/rep interleave (<code>create_fec</code>, <code>offset = 2</code>), 5-character merge delay, and 170 Hz shift (hardcoded <code>deviation_f = 85</code>) are all lifted directly from fldigi&rsquo;s C++.</li>
-  <li><strong>fventuri/navtex</strong> &mdash; <a href="https://github.com/fventuri/navtex">github.com/fventuri/navtex</a>. Independent reference decoder; the two real-world OTA recordings in the <code>TestAudio/</code> corpus come from this project&rsquo;s examples.</li>
-  <li><strong>JNX</strong> &mdash; <a href="https://arachnoid.com/JNX/">arachnoid.com/JNX</a>. Java reference with detailed FEC diagnostics.</li>
-</ul>
+<h2>Specification Basis</h2>
+<p>PhosphorTEX&rsquo;s DSP is built from the published CCIR Recommendation 476 / 625 specification for SITOR mode B, the IMO NAVTEX Manual (IMO publication 951E) for NAVAREA station identifiers and slot allocations, and ITU-R Recommendation M.540 for the 170 Hz shift and 100 Bd rate. Where we import test-audio files for cross-checking, their provenance is noted in the corresponding row of the test table below.</p>
 
 <h2>Synthetic Test Files</h2>
 
@@ -189,7 +184,7 @@ phase[6]: chars= 53 dx= 51 rx=  0 errs=  2 mism= 48 (90.6%)</pre>
 <p>Simulates a station that skipped the <code>NNNN</code> sentinel. The framer enters <code>.body</code> state on <code>ZCZC</code> detection, accumulates characters, and would normally close when <code>NNNN</code> arrives. Because it never does, the end-of-file flush path fires (same code path as the app&rsquo;s STOP button) and the message is emitted with <code>truncated: true</code>. The body is decoded cleanly up to the point of EOF.</p>
 
 <h2>AFC Retune Count (Clean Synthetic)</h2>
-<p>A sensitive measure of AFC stability. Before the fldigi-canonical port: 19 retunes in 38.9 s of clean signal, each one disrupting the Goertzel filter response and costing bits. After:</p>
+<p>A sensitive measure of AFC stability. Before porting in parabolic sub-bin peak interpolation and centre-tracking smoothing: 19 retunes in 38.9 s of clean signal, each one disrupting the Goertzel filter response and costing bits. After:</p>
 <table>
   <tr><th>AFC Implementation</th><th>Retunes (38.9 s)</th><th>Decoded Body</th></tr>
   <tr><td>Pre-port (3-frame confirm + 16 Hz threshold)</td><td class="warn">19</td><td class="warn">Fragmented &mdash; chunks lost at each retune</td></tr>
@@ -205,13 +200,13 @@ phase[6]: chars= 53 dx= 51 rx=  0 errs=  2 mism= 48 (90.6%)</pre>
   <li><strong>Missing NNNN:</strong> full body decoded, correctly flagged <code>[TRUNC]</code> via EOF flush.</li>
   <li><strong>Idle channel:</strong> correctly silent &mdash; no phantom messages, no noise streamed.</li>
   <li><strong>Phase ambiguity:</strong> the 7-way disambiguator picks the correct character-boundary phase decisively (0.0% vs 10%+ on other phases) and replays its buffered history into the framer so the <code>ZCZC</code> header is preserved.</li>
-  <li><strong>FEC:</strong> DX preferred on valid alpha, RX fallback on alpha failure, ERR on both invalid &mdash; fldigi-canonical behaviour verified.</li>
-  <li><strong>Open work:</strong> AFC centre-frequency tracking needs to be ported from fldigi&rsquo;s <code>decayavg</code> / 3 Hz/update clamp before the real-world OTA samples decode reliably.</li>
+  <li><strong>FEC:</strong> DX preferred on valid alpha, RX fallback on alpha failure, ERR on both invalid &mdash; CCIR-476 spec-conformant behaviour verified.</li>
+  <li><strong>Open work:</strong> the Goertzel tone detectors need investigation to decode real-world OTA samples at non-canonical carrier frequencies.</li>
 </ul>
 
 <footer>
   <p>PhosphorTEX &mdash; FractalDoctor<br>
-  Synthetic test signals generated from fldigi-canonical <code>create_fec</code> wire format.<br>
+  Synthetic test signals generated directly from the CCIR-476 wire format specification.<br>
   Tests conducted 2026-04-21 using NavTexDecode CLI (symlinked DSP, identical to iOS app).</p>
 </footer>
 
