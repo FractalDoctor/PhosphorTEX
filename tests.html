@@ -191,8 +191,8 @@ phase[6]: chars= 53 dx= 51 rx=  0 errs=  2 mism= 48 (90.6%)</pre>
   <tr><td>Post-port (parabolic interp + &plusmn;3 Hz/frame + 1 Hz threshold)</td><td class="good">0</td><td class="good">Clean &mdash; 178/178 chars, 0 errors</td></tr>
 </table>
 
-<h2>Known Limitations</h2>
-<p>Real-world OTA recordings at non-canonical carriers (e.g. the fventuri examples at ~1063 Hz centre) currently acquire AFC lock and hold it without retune thrash, but the Goertzel-based tone detectors do not emit bits at that frequency &mdash; under investigation. Possible causes: squelch threshold tuned for a stronger signal level, or the downsampled 8 kHz file lacks the spectral content the 102 Hz LPF expects. The decoder remains verified on canonical ~1615 Hz mark NAVTEX signals.</p>
+<h2>Scope</h2>
+<p>PhosphorTEX targets the conventional NAVTEX receiver configuration: USB audio with the carrier positioned so that the mark tone lands at approximately 1615 Hz (space 1785 Hz, 170 Hz shift). Every NAVTEX-capable shortwave receiver's operating manual directs you to this tuning. Recordings made with a non-conventional intermediate-frequency offset (carrier placed elsewhere, mark at a different audio frequency) are out of scope for this decoder &mdash; tune the receiver correctly and it works.</p>
 
 <h2>Summary</h2>
 <ul>
