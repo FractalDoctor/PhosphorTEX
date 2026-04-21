@@ -31,170 +31,38 @@
 <body>
 
 <h1>PhosphorTEX — Decoder Test Results</h1>
-<p>Accuracy testing of the PhosphorTEX NAVTEX decoder using the CLI test harness (<code>NavTexDecode</code>). The CLI uses identical DSP code to the iOS app via symlinks &mdash; same source files, same binary logic.</p>
+<p>Accuracy testing of the PhosphorTEX NAVTEX decoder against real over-the-air recordings of 518 kHz maritime-safety broadcasts.  The testing CLI (<code>NavTexDecode</code>) shares every DSP source file with the iOS app via symlinks &mdash; same code, same output.</p>
 
-<h2>Methodology</h2>
-<ul>
-  <li>All tests run via the <code>NavTexDecode</code> CLI tool, which shares DSP source files with the iOS app via symlinks (single source of truth).</li>
-  <li>Each synthetic scenario is generated from the CCIR-476 wire format specification: alpha / rep interleaving with a 2-character offset and a <code>2&times;[code_rep, code_alpha]</code> preamble that triggers the receiver's rep-on-alpha resync.</li>
-  <li>FEC statistics are reported per the winning candidate of the 7-way phase disambiguator: <code>DX</code> = alpha copy 4:3-valid, <code>RX</code> = fell back to rep copy, <code>ERRS</code> = both invalid, <code>MISM</code> = both valid but disagreed.</li>
-  <li>CARDS output = framed <code>ZCZC &hellip; NNNN</code> message; TAPE output = raw merged character stream.</li>
-</ul>
-
-<h3>Decoder Settings</h3>
+<h2>Decoder stack</h2>
 <ul>
   <li>Sample rate: 8 kHz (resampled from source if needed)</li>
-  <li>FFT: 512-point, Hann window, ~15.6 Hz/bin</li>
-  <li>Tone detection: I/Q quadrature demodulation, biquad LPF (102 Hz cutoff at 170 Hz shift)</li>
-  <li>Envelope: asymmetric decay-average (attack = symbollen/4, decay = symbollen&times;16)</li>
-  <li>Bit decision: mark / space magnitude compare with hysteretic squelch (open &gt; 0.002, close &gt; 0.001)</li>
-  <li>SitorDecoder: synchronous 7-bit framer, DPLL &alpha; = 0.05</li>
-  <li>FECMerger: 5-character DX/RX pair-merge delay per CCIR-476 spec</li>
-  <li>PhaseDisambiguator: 7 parallel SitorDecoders with lockThreshold = 8..14, scored by <code>(mismatched + 2&times;bothInvalid) / contentCharsIn</code>, decisive commit below 0.05</li>
-  <li>AFC: parabolic sub-bin peak interpolation (3-point fit), centre tracking with snap on acquisition and ±3 Hz/frame clamp in steady-state, 1 Hz retune threshold, shift snapped to 170 Hz exact per the CCIR-476 specification</li>
-  <li>NAVTEX protocol parameters (fixed): 100 Bd, 170 Hz shift, CCIR-476 alphabet (4-marks + 3-spaces validity test)</li>
+  <li>FFT: 512-point Hann-windowed, ~15.6 Hz/bin</li>
+  <li>Tone detection: I/Q quadrature demodulation with biquad low-pass filtering (102 Hz cutoff at 170 Hz shift); asymmetric decay-average envelope tracking</li>
+  <li>Bit decision: mark / space magnitude comparison with hysteretic squelch (open &gt; 0.002, close &gt; 0.001)</li>
+  <li>Clock recovery: DPLL with per-edge phase nudge, &alpha; = 0.05</li>
+  <li>Framer: rolling 7-bit window + shift-until-valid phase search; sentinel-aligned alpha/rep routing per the CCIR-476 specification; polarity auto-detected via a parallel bit-inverted lane</li>
+  <li>AFC: parabolic sub-bin peak interpolation (3-point fit), centre-frequency tracking with snap-on-acquire and &plusmn;3 Hz/frame clamp in steady-state, 1 Hz retune threshold; 170 Hz shift snapped to spec (&plusmn;85 Hz around centre)</li>
+  <li>Search band: 800&ndash;2500 Hz, spanning both common NAVTEX audio-tuning conventions (see Scope below)</li>
 </ul>
 
-<h2>Specification Basis</h2>
-<p>PhosphorTEX&rsquo;s DSP is built from the published CCIR Recommendation 476 / 625 specification for SITOR mode B, the IMO NAVTEX Manual (IMO publication 951E) for NAVAREA station identifiers and slot allocations, and ITU-R Recommendation M.540 for the 170 Hz shift and 100 Bd rate. Where we import test-audio files for cross-checking, their provenance is noted in the corresponding row of the test table below.</p>
-
-<h2>Synthetic Test Files</h2>
-
-<table>
-  <tr>
-    <th>File</th>
-    <th>Scenario</th>
-    <th>Duration</th>
-    <th>Format</th>
-    <th>Expected Result</th>
-  </tr>
-  <tr>
-    <td><code>navtex_clean_synthetic.wav</code></td>
-    <td>Clean 40 dB SNR, correct alpha/rep interleave, ZCZC &hellip; NNNN envelope</td>
-    <td>38.9 s</td>
-    <td>8 kHz, 16-bit PCM, mono</td>
-    <td>0 errors, full message framed, 0% mismatch</td>
-  </tr>
-  <tr>
-    <td><code>navtex_fec_stress.wav</code></td>
-    <td>Same text, every REP copy has 1 bit flipped (FEC-fallback stress)</td>
-    <td>38.9 s</td>
-    <td>8 kHz, 16-bit PCM, mono</td>
-    <td>Message decoded via DX; elevated mismatch expected</td>
-  </tr>
-  <tr>
-    <td><code>navtex_phasing_only.wav</code></td>
-    <td>&alpha;/&beta; phasing preamble only, no message</td>
-    <td>35.0 s</td>
-    <td>8 kHz, 16-bit PCM, mono</td>
-    <td>Framer stays IDLE; no message emitted; disambiguator never commits (winner = none)</td>
-  </tr>
-  <tr>
-    <td><code>navtex_long_nnnn_missing.wav</code></td>
-    <td>Valid header + body but no terminating NNNN</td>
-    <td>38.2 s</td>
-    <td>8 kHz, 16-bit PCM, mono</td>
-    <td>Truncated-flag message on EOF flush</td>
-  </tr>
-</table>
-
-<h2>Results</h2>
-
-<table>
-  <tr>
-    <th>File</th>
-    <th>Winner Phase</th>
-    <th>CHARS</th>
-    <th>DX / RX / ERR</th>
-    <th>MISM</th>
-    <th>CARDS</th>
-  </tr>
-  <tr>
-    <td><code>navtex_clean_synthetic</code></td>
-    <td>2</td>
-    <td>178</td>
-    <td>178 / 0 / 0</td>
-    <td class="good">0 (0.0%)</td>
-    <td class="good">&check; Full message</td>
-  </tr>
-  <tr>
-    <td><code>navtex_fec_stress</code></td>
-    <td>2</td>
-    <td>99</td>
-    <td>72 / 13 / 14</td>
-    <td class="warn">49 (49.5%)</td>
-    <td class="warn">&mdash; No card (see note)</td>
-  </tr>
-  <tr>
-    <td><code>navtex_phasing_only</code></td>
-    <td>none</td>
-    <td>50</td>
-    <td>50 / 0 / 0 (all phasing)</td>
-    <td class="good">0</td>
-    <td class="good">&check; Correctly silent</td>
-  </tr>
-  <tr>
-    <td><code>navtex_long_nnnn_missing</code></td>
-    <td>2</td>
-    <td>173</td>
-    <td>173 / 0 / 0</td>
-    <td class="good">0 (0.0%)</td>
-    <td class="good">&check; Full message [TRUNC]</td>
-  </tr>
-</table>
-
-<h2>Decoded Output &mdash; Clean Synthetic</h2>
-
-<div class="sample">--- 2026-04-21 13:01 UTC | GA01 | NAV WARNING
-GALE WARNING. DOGGER FISHER GERMAN BIGHT.
-SW GALE 8 BACKING S SEVERE GALE 9 LATER. RAIN. GOOD.
----</div>
-
-<p>Header parse: station <code>G</code> (Cullercoats, NAVAREA I), subject <code>A</code> (NAV WARNING), serial <code>01</code>. Body decoded clean with zero FEC errors, zero DX/RX mismatches, and a correct 7-way phase lock on offset 2.</p>
-
-<h2>Decoded Output &mdash; NNNN Missing (EOF flush)</h2>
-
-<div class="sample">--- 2026-04-21 13:01 UTC | GA01 | NAV WARNING [TRUNC]
-GALE WARNING. DOGGER FISHER GERMAN BIGHT.
-SW GALE 8 BACKING S SEVERE GALE 9 LATER. RAIN. GOOD.
----</div>
-
-<p>Same header and body, but the framer flagged the message <code>[TRUNC]</code> because no <code>NNNN</code> sentinel was received and the pipeline flushed in-flight state at end-of-file &mdash; the same behaviour the iOS app uses when the operator hits STOP mid-message.</p>
-
-<h2>Per-Phase Diagnostics &mdash; Clean Synthetic</h2>
-<p>The 7-way disambiguator keeps per-candidate statistics so the right character-phase can be chosen objectively rather than by luck-of-the-first-lock:</p>
-<pre>phase[0]: chars=125 dx= 69 rx= 19 errs= 37 mism= 29 (23.2%)
-phase[1]: chars=178 dx=112 rx= 27 errs= 39 mism= 48 (27.0%)
-phase[2]: chars=178 dx=178 rx=  0 errs=  0 mism=  0 (0.0%)   &larr; winner
-phase[3]: chars= 66 dx= 35 rx= 11 errs= 20 mism= 17 (25.8%)
-phase[4]: chars= 47 dx= 18 rx= 12 errs= 17 mism=  5 (10.6%)
-phase[5]: chars= 94 dx= 74 rx=  4 errs= 16 mism= 60 (63.8%)
-phase[6]: chars= 53 dx= 51 rx=  0 errs=  2 mism= 48 (90.6%)</pre>
-<p>The separation between phase 2 (0.0% mismatch) and the next-best candidate (10.6%) is decisive &mdash; well below the 5% commit threshold.</p>
-
-<h2>Notes on Specific Files</h2>
-
-<h3>navtex_fec_stress.wav &mdash; Bit-Flipped REP Copies</h3>
-<p>Every REP copy on the wire has its least-significant bit flipped, stressing the FEC fallback machinery. Our merger correctly prefers the uncorrupted alpha (DX) copy whenever it&rsquo;s 4:3-valid, so body characters still decode. The elevated <strong>49% mismatch</strong> rate is the signature of the corruption: alpha and rep are both 4:3-valid in many cases (a corrupted rep that happens to land on another of the 35 valid codes) but disagree. CARDS is empty because enough register-shift codes land at corrupted positions mid-body that LTRS/FIGS state drifts and the framer loses the <code>ZCZC</code> / <code>NNNN</code> match by the end. This is a worst-case synthetic &mdash; no real-world channel bit-flips every REP. Real FEC falls back on a few percent of REPs, which our merger handles cleanly.</p>
-
-<h3>navtex_phasing_only.wav &mdash; Idle-Channel Silence</h3>
-<p>The wire carries only &alpha;/&beta; phasing symbols &mdash; what a NAVTEX transmitter emits between messages. All seven phase candidates see valid codes but every emission is a phasing-filler byte, filtered out by the merger. The disambiguator correctly declines to commit (<code>winner = none</code>) and the framer stays <code>.idle</code>. No noise is streamed to TAPE or CARDS &mdash; the correct behaviour when no real message is on-air.</p>
-
-<h3>navtex_long_nnnn_missing.wav &mdash; Dropped Terminator</h3>
-<p>Simulates a station that skipped the <code>NNNN</code> sentinel. The framer enters <code>.body</code> state on <code>ZCZC</code> detection, accumulates characters, and would normally close when <code>NNNN</code> arrives. Because it never does, the end-of-file flush path fires (same code path as the app&rsquo;s STOP button) and the message is emitted with <code>truncated: true</code>. The body is decoded cleanly up to the point of EOF.</p>
-
 <h2>Real-world SDR captures</h2>
-<p>Tested against publicly-available WebSDR recordings of 518 kHz NAVTEX traffic.  These are noisy over-the-air captures &mdash; no cleanup, no SNR preconditioning &mdash; at audio tunings spanning both the maritime-receiver (~1615 Hz mark) and SDR (~1085 Hz mark) conventions.</p>
+<p>Tested against publicly-available WebSDR recordings of live 518 kHz NAVTEX traffic.  These are noisy over-the-air captures &mdash; no cleanup, no SNR preconditioning.</p>
 
 <table>
   <tr><th>Capture</th><th>Duration</th><th>Audio centre</th><th>Messages framed</th><th>Sample content</th></tr>
   <tr>
-    <td>WebSDR 518 kHz, May 2018</td><td>8 min 35 s</td><td>~1000 Hz (SDR)</td><td class="good">20 messages</td>
-    <td>Netherlands Coastguard nav warnings (Windfarm Borssele, geotechnical drilling, Riffgat lightbuoys, Helgoland German Bight exercises, etc.)</td>
+    <td>WebSDR 518 kHz, May 2018</td>
+    <td>8 min 35 s</td>
+    <td>~1000 Hz</td>
+    <td class="good">20 messages</td>
+    <td>Netherlands Coastguard nav warnings (Windfarm Borssele, geotechnical drilling, Riffgat lightbuoys, Helgoland German Bight exercises&hellip;)</td>
   </tr>
   <tr>
-    <td>WebSDR 518 kHz, July 2020</td><td>5 min 23 s</td><td>~1000 Hz (SDR)</td><td class="good">13 messages</td>
-    <td>NCC-Hamburg nav warnings (German armed forces firing exercises, OWP Kaskasi survey operations, etc.)</td>
+    <td>WebSDR 518 kHz, July 2020</td>
+    <td>5 min 23 s</td>
+    <td>~1000 Hz</td>
+    <td class="good">13 messages</td>
+    <td>NCC-Hamburg nav warnings (German armed forces firing exercises, OWP Kaskasi survey operations&hellip;)</td>
   </tr>
 </table>
 
@@ -243,25 +111,14 @@ CANCEL THIS MESSAGE  291100 UTC JUL 20.
 <h2>Scope</h2>
 <p>The decoder targets both of the common NAVTEX audio tuning conventions:</p>
 <ul>
-  <li><strong>Maritime-receiver convention</strong>: USB with the carrier positioned so mark lands at approximately 1615 Hz (space 1785 Hz, 170 Hz shift).  This is what every NAVTEX receiver operator's manual specifies.</li>
-  <li><strong>SDR / WebSDR convention</strong>: the receiver tuned to 517.000 kHz in USB mode, placing the mark tone at approximately 1085 Hz and space at 915 Hz.  This is what the publicly-available recordings at 518 kHz universally use.</li>
+  <li><strong>Maritime-receiver convention</strong>: USB with the carrier positioned so the mark tone lands at approximately 1615 Hz (space 1785 Hz, 170 Hz shift).  This is what every NAVTEX receiver operator&rsquo;s manual specifies.</li>
+  <li><strong>SDR / WebSDR convention</strong>: the receiver tuned to 517.000 kHz in USB mode, placing the mark tone at approximately 1085 Hz and space at 915 Hz (&plusmn;85 around a centre of 1000 Hz).  This is what the publicly-available recordings at 518 kHz universally use.</li>
 </ul>
 <p>AFC search band is 800&ndash;2500 Hz to span both, and the decoder runs normal and polarity-inverted lanes in parallel so mark-on-upper-tone vs mark-on-lower-tone captures both decode without any manual toggle.</p>
 
-<h2>Summary</h2>
-<ul>
-  <li><strong>Clean signal:</strong> 178 characters, zero errors, full envelope framed, message card rendered correctly.</li>
-  <li><strong>Missing NNNN:</strong> full body decoded, correctly flagged <code>[TRUNC]</code> via EOF flush.</li>
-  <li><strong>Idle channel:</strong> correctly silent &mdash; no phantom messages, no noise streamed.</li>
-  <li><strong>Phase ambiguity:</strong> the 7-way disambiguator picks the correct character-boundary phase decisively (0.0% vs 10%+ on other phases) and replays its buffered history into the framer so the <code>ZCZC</code> header is preserved.</li>
-  <li><strong>FEC:</strong> DX preferred on valid alpha, RX fallback on alpha failure, ERR on both invalid &mdash; CCIR-476 spec-conformant behaviour verified.</li>
-  <li><strong>Open work:</strong> the Goertzel tone detectors need investigation to decode real-world OTA samples at non-canonical carrier frequencies.</li>
-</ul>
-
 <footer>
   <p>PhosphorTEX &mdash; FractalDoctor<br>
-  Synthetic test signals generated directly from the CCIR-476 wire format specification.<br>
-  Tests conducted 2026-04-21 using NavTexDecode CLI (symlinked DSP, identical to iOS app).</p>
+  Decoder verified against over-the-air 518 kHz WebSDR recordings of European NAVTEX traffic (NAVAREA I).</p>
 </footer>
 
 </body>
