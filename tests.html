@@ -51,7 +51,7 @@
   <li>SitorDecoder: synchronous 7-bit framer, DPLL &alpha; = 0.05</li>
   <li>FECMerger: 5-character DX/RX pair-merge delay (fldigi-canonical)</li>
   <li>PhaseDisambiguator: 7 parallel SitorDecoders with lockThreshold = 8..14, scored by <code>(mismatched + 2&times;bothInvalid) / contentCharsIn</code>, decisive commit below 0.05</li>
-  <li>AFC: 3-frame pre-acquisition, 3-frame retune confirmation, 2-frame LOST confirmation; shift snapped to 170 Hz exact per fldigi&rsquo;s <code>deviation_f = 85</code> constant</li>
+  <li>AFC: parabolic sub-bin peak interpolation (3-point fit), fldigi-canonical centre tracking (snap on acquisition, ±3 Hz/frame clamp in steady-state, 1 Hz retune threshold), shift snapped to 170 Hz exact per fldigi&rsquo;s <code>deviation_f = 85</code> constant</li>
   <li>NAVTEX protocol parameters (fixed): 100 Bd, 170 Hz shift, CCIR-476 alphabet (4-marks + 3-spaces validity test)</li>
 </ul>
 
@@ -188,8 +188,16 @@ phase[6]: chars= 53 dx= 51 rx=  0 errs=  2 mism= 48 (90.6%)</pre>
 <h3>navtex_long_nnnn_missing.wav &mdash; Dropped Terminator</h3>
 <p>Simulates a station that skipped the <code>NNNN</code> sentinel. The framer enters <code>.body</code> state on <code>ZCZC</code> detection, accumulates characters, and would normally close when <code>NNNN</code> arrives. Because it never does, the end-of-file flush path fires (same code path as the app&rsquo;s STOP button) and the message is emitted with <code>truncated: true</code>. The body is decoded cleanly up to the point of EOF.</p>
 
+<h2>AFC Retune Count (Clean Synthetic)</h2>
+<p>A sensitive measure of AFC stability. Before the fldigi-canonical port: 19 retunes in 38.9 s of clean signal, each one disrupting the Goertzel filter response and costing bits. After:</p>
+<table>
+  <tr><th>AFC Implementation</th><th>Retunes (38.9 s)</th><th>Decoded Body</th></tr>
+  <tr><td>Pre-port (3-frame confirm + 16 Hz threshold)</td><td class="warn">19</td><td class="warn">Fragmented &mdash; chunks lost at each retune</td></tr>
+  <tr><td>Post-port (parabolic interp + &plusmn;3 Hz/frame + 1 Hz threshold)</td><td class="good">0</td><td class="good">Clean &mdash; 178/178 chars, 0 errors</td></tr>
+</table>
+
 <h2>Known Limitations</h2>
-<p>The real-world OTA recordings sourced from fventuri&rsquo;s <code>examples/</code> directory are carried at a non-canonical ~1063 Hz centre (vs the textbook 1615 Hz mark / 1785 Hz space). Our AFC peak-pair search finds the tones, but the centre fluctuates across FFT bin boundaries faster than our 3-frame retune confirmation can follow &mdash; so the Goertzel detectors retune constantly and lose bit sync. fldigi&rsquo;s own approach is a slow <code>decayavg</code> on the centre frequency with a &le; 3 Hz/update clamp during <code>READ_DATA</code>; porting that is the next DSP task. Once in, these real-world captures should decode on par with fldigi / fventuri / JNX.</p>
+<p>Real-world OTA recordings at non-canonical carriers (e.g. the fventuri examples at ~1063 Hz centre) currently acquire AFC lock and hold it without retune thrash, but the Goertzel-based tone detectors do not emit bits at that frequency &mdash; under investigation. Possible causes: squelch threshold tuned for a stronger signal level, or the downsampled 8 kHz file lacks the spectral content the 102 Hz LPF expects. The decoder remains verified on canonical ~1615 Hz mark NAVTEX signals.</p>
 
 <h2>Summary</h2>
 <ul>
