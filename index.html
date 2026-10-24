@@ -78,34 +78,41 @@
 <div class="border-top">&#9484;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9488;</div>
 
 <h1>&#9651; PHOSPHORTEX</h1>
-<div class="tagline">Real-Time NAVTEX Maritime-Safety Decoder for iPhone.</div>
+<div class="tagline">Real-Time NAVTEX Maritime-Safety Decoder for iPhone and iPad.</div>
 
 <div class="content">
 
-<p>PhosphorTEX decodes NAVTEX (Navigational Telex) broadcasts in real time using your iPhone's microphone. Hold your phone near a shortwave receiver tuned to 518 kHz, 490 kHz, or 4209.5 kHz and watch gale warnings, nav warnings, and maritime safety information appear on an authentic amber phosphor display.</p>
+<p>PhosphorTEX decodes NAVTEX (Navigational Telex) broadcasts in real time using your iPhone or iPad microphone. Hold it near a shortwave receiver tuned to 518 kHz, 490 kHz, or 4209.5 kHz and watch gale warnings, nav warnings, and maritime safety information appear on an authentic phosphor CRT display.</p>
 
-<p>No internet connection required. No external hardware. No account. Just your iPhone and a maritime receiver.</p>
+<p>No internet connection required. No external hardware. No account. Just your iPhone or iPad and a maritime receiver.</p>
 
 <h2>FEATURES</h2>
 <ul>
     <li>Real-time NAVTEX decoding via microphone &mdash; CCIR-476 SITOR-B, 100 Bd, 170 Hz shift</li>
-    <li>Time-diversity FEC: 5-character DX/RX pair-merge per CCIR-476 spec</li>
-    <li>7-way phase-ambiguity disambiguator picks the correct character-boundary phase automatically</li>
-    <li>Automatic frequency control with FFT peak-pair search locked to 170 Hz shift</li>
+    <li>Automatic character alignment and automatic polarity detection, so maritime receivers and SDR tuning both work with no toggles</li>
+    <li>Automatic frequency control that finds and tracks the 170 Hz tone pair anywhere from 800 to 2500 Hz</li>
     <li>ZCZC&hellip;NNNN message framer with B1/B2/B3B4 header parsing</li>
     <li>CARDS view: message cards coloured by subject (SAR/piracy, nav warning, met warning, ice report &hellip;)</li>
-    <li>TAPE view: raw teleprinter stream, character-by-character, including FEC ERR markers</li>
+    <li>TAPE view: raw teleprinter stream, character-by-character, with errors shown rather than guessed</li>
     <li>Live FFT spectrum display and scrolling waterfall (SDR-style colour palette)</li>
-    <li>FEC health panel: DX valid %, RX fallback %, ERR %, alternation lock status</li>
-    <li>NAVAREA station schedule tab: 24-slot grid, current-slot highlight, UTC clock</li>
-    <li>Per-subject mute list (D-category SAR/piracy messages always override)</li>
-    <li>Full message log with search, share, and export</li>
-    <li>Amber phosphor CRT theme with scanlines, vignette, and glow effects</li>
+    <li>FEC health panel: each character measured against the second copy NAVTEX sends &mdash; DX valid %, RX fallback %, both invalid %, alternation lock</li>
+    <li>NAVAREA station schedule tab: 43 coast stations, 24-slot grid, current-slot highlight, UTC clock</li>
+    <li>Per-subject mute list (D-category SAR/piracy messages can never be muted)</li>
+    <li>Alert colour for SAR/piracy and serial-00 vital messages</li>
+    <li>Full message log with copy, share, and export of every message at once</li>
+    <li>Amber and green phosphor CRT themes with scanlines, vignette, and glow effects</li>
+    <li>Native on iPad in every orientation, with larger type and the cards, spectrum, waterfall and station schedule across the full width</li>
     <li>No accounts, no tracking, no network access</li>
 </ul>
 
 <h2>DSP ENGINE</h2>
-<p>Per-sample I/Q quadrature demodulation with biquad low-pass filtering and W7AY Automatic Threshold Correction. Synchronous 7-bit SITOR-B framer with DPLL clock recovery. Seven parallel character-phase candidates scored by DX/RX mismatch rate on real message content &mdash; the winning phase commits and its buffered history replays through the framer so the ZCZC header is never lost. 512-point FFT for frequency analysis and AFC. All signal processing runs entirely on-device.</p>
+<p>Per-sample I/Q quadrature demodulation with biquad low-pass filtering and asymmetric envelope tracking. Synchronous 7-bit SITOR-B decoding with DPLL clock recovery, two polarity lanes and a shift-until-valid character window checked against the CCIR-476 4:3 constant-weight code. 512-point FFT for frequency analysis and AFC. All signal processing runs entirely on-device.</p>
+
+<h2>REQUIREMENTS</h2>
+<ul>
+    <li>iPhone or iPad with a microphone</li>
+    <li>iOS or iPadOS 26.4 or later</li>
+</ul>
 
 <h2>DECODER ACCURACY</h2>
 <p>PhosphorTEX is verified against real over-the-air 518 kHz WebSDR recordings of live maritime-safety traffic (Netherlands Coastguard and NCC-Hamburg nav warnings).  Detailed test results and decoded output samples are available in the <a href="tests.html">decoder test report</a>.</p>
